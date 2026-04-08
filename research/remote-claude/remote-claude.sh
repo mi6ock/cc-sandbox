@@ -7,6 +7,11 @@
 #   remote-claude stop [local_path]
 #   remote-claude status
 #   remote-claude setup <ssh_host>
+#   remote-claude install              — シェルにコマンド登録
+#
+# Install:
+#   bash remote-claude.sh install
+#   → "remote-claude" コマンドが使えるようになる
 
 set -euo pipefail
 
@@ -208,9 +213,45 @@ cmd_status() {
     mutagen sync list 2>/dev/null | grep -A5 "remote-claude" || echo "  セッションなし"
 }
 
+cmd_install() {
+    local target="/usr/local/bin/remote-claude"
+    local self
+    self="$(cd "$(dirname "$0")" && pwd)/$(basename "$0")"
+
+    if [ -f "$target" ] || [ -L "$target" ]; then
+        echo "既にインストール済み: $target"
+        echo "再インストールするには: sudo rm $target && bash $0 install"
+        return
+    fi
+
+    echo "シンボリックリンクを作成: $target → $self"
+    if ln -s "$self" "$target" 2>/dev/null; then
+        echo "完了! 'remote-claude' コマンドが使えます"
+    else
+        echo "権限エラー。sudoで再試行..."
+        sudo ln -s "$self" "$target"
+        echo "完了! 'remote-claude' コマンドが使えます"
+    fi
+
+    echo ""
+    echo "使い方:"
+    echo "  remote-claude setup <ssh_host>          — 初回セットアップ"
+    echo "  remote-claude <ssh_host> [project_path] — セッション開始"
+    echo "  remote-claude stop [project_path]       — 停止"
+    echo "  remote-claude status                    — 状態確認"
+}
+
 main() {
-    read_config
     local cmd="${1:-}"
+
+    # installはconfig不要
+    if [ "$cmd" = "install" ]; then
+        cmd_install
+        return
+    fi
+
+    read_config
+
     case "$cmd" in
         stop)    shift; cmd_stop "$@" ;;
         status)  cmd_status ;;
@@ -221,6 +262,7 @@ main() {
             echo "  remote-claude setup <ssh_host>          — リモートセットアップ"
             echo "  remote-claude stop [local_path]         — 全停止"
             echo "  remote-claude status                    — 状態表示"
+            echo "  remote-claude install                   — コマンド登録"
             ;;
         *)       cmd_start "$@" ;;
     esac
