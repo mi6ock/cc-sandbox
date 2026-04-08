@@ -214,23 +214,37 @@ cmd_status() {
 }
 
 cmd_install() {
-    local target="/usr/local/bin/remote-claude"
     local self
     self="$(cd "$(dirname "$0")" && pwd)/$(basename "$0")"
+    local bin_dir="$HOME/.local/bin"
+    local target="$bin_dir/remote-claude"
+
+    mkdir -p "$bin_dir"
 
     if [ -f "$target" ] || [ -L "$target" ]; then
         echo "既にインストール済み: $target"
-        echo "再インストールするには: sudo rm $target && bash $0 install"
+        echo "再インストール: rm $target && bash $0 install"
         return
     fi
 
-    echo "シンボリックリンクを作成: $target → $self"
-    if ln -s "$self" "$target" 2>/dev/null; then
-        echo "完了! 'remote-claude' コマンドが使えます"
-    else
-        echo "権限エラー。sudoで再試行..."
-        sudo ln -s "$self" "$target"
-        echo "完了! 'remote-claude' コマンドが使えます"
+    ln -s "$self" "$target"
+    echo "完了! シンボリックリンク: $target → $self"
+
+    # PATHに~/.local/binがなければ追加
+    if ! echo "$PATH" | tr ':' '\n' | grep -qx "$bin_dir"; then
+        local shell_rc=""
+        if [ -f "$HOME/.zshrc" ]; then
+            shell_rc="$HOME/.zshrc"
+        elif [ -f "$HOME/.bashrc" ]; then
+            shell_rc="$HOME/.bashrc"
+        fi
+        if [ -n "$shell_rc" ] && ! grep -q "$bin_dir" "$shell_rc" 2>/dev/null; then
+            echo "" >> "$shell_rc"
+            echo "# remote-claude" >> "$shell_rc"
+            echo "export PATH=\"\$HOME/.local/bin:\$PATH\"" >> "$shell_rc"
+            echo "PATHに追加しました: $shell_rc"
+            echo "反映するには: source $shell_rc"
+        fi
     fi
 
     echo ""
