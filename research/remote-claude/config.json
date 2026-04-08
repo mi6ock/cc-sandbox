@@ -1,0 +1,6 @@
+{
+  "default_host": "",
+  "agent_port": 9998,
+  "remote_base_dir": "~/remote-claude",
+  "exclude_patterns": ["build/", ".dart_tool/", "node_modules/", ".gradle/", ".build/", "Pods/"]
+}
