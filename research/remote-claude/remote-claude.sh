@@ -15,7 +15,12 @@
 
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+# シンボリックリンクを解決して実体のディレクトリを取得
+SELF="$0"
+if [ -L "$SELF" ]; then
+    SELF="$(readlink "$SELF")"
+fi
+SCRIPT_DIR="$(cd "$(dirname "$SELF")" && pwd)"
 CONFIG_FILE="$SCRIPT_DIR/config.json"
 PID_FILE="/tmp/remote-claude-agent.pid"
 TOKEN_FILE="/tmp/remote-claude-token"
