@@ -57,7 +57,8 @@ cmd_start() {
     local project_name
     project_name=$(basename "$local_path")
     local remote_path="${REMOTE_BASE}/${project_name}"
-    local sync_name="remote-claude-${project_name}"
+    local sync_name
+    sync_name="rc-$(echo "$project_name" | tr '_' '-' | tr '[:upper:]' '[:lower:]')"
     local token
     token=$(generate_token)
 
@@ -147,19 +148,15 @@ cmd_start() {
     }
     trap cleanup EXIT
 
-    # 5. SSH接続（逆トンネル付き）+ tmux
-    log "リモートに接続中..."
+    # 5. SSH接続（逆トンネル付き）→ リモートでclaude起動
+    log "リモートClaudeに接続中..."
     ssh -R "${AGENT_PORT}:localhost:${AGENT_PORT}" \
         -t "$host" "
         export COMMAND_AGENT_PORT=${AGENT_PORT}
         export COMMAND_AGENT_TOKEN=${token}
         export PATH=\"\$HOME/bin:\$PATH\"
         cd ${remote_path}
-        if tmux has-session -t ${TMUX_SESSION} 2>/dev/null; then
-            tmux attach -t ${TMUX_SESSION}
-        else
-            tmux new-session -s ${TMUX_SESSION} 'claude --dangerously-skip-permissions'
-        fi
+        claude --dangerously-skip-permissions
     "
 }
 
@@ -176,7 +173,8 @@ cmd_stop() {
     local local_path="${1:-$(pwd)}"
     local project_name
     project_name=$(basename "$local_path")
-    local sync_name="remote-claude-${project_name}"
+    local sync_name
+    sync_name="rc-$(echo "$project_name" | tr '_' '-' | tr '[:upper:]' '[:lower:]')"
 
     if [ -f "$PID_FILE" ] && kill -0 "$(cat "$PID_FILE")" 2>/dev/null; then
         kill "$(cat "$PID_FILE")"
