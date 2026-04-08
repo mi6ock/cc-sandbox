@@ -96,6 +96,8 @@ cmd_start() {
     fi
 
     # 3. mutagen同期
+    # リモートディレクトリを事前作成（mutagenは自動作成しない）
+    ssh -o ConnectTimeout=5 "$host" "mkdir -p $remote_path"
     mutagen daemon start 2>/dev/null || true
     if mutagen sync list 2>/dev/null | grep -q "Name: ${sync_name}"; then
         log "mutagen同期: 既存セッション再利用"
@@ -111,12 +113,12 @@ cmd_start() {
             --mode=two-way-resolved \
             --ignore-vcs \
             $exclude_args \
-            "$host:$remote_path" "$local_path"
+            "$local_path" "$host:$remote_path"
 
         log "初回同期待ち..."
         local wait_count=0
         while true; do
-            if mutagen sync list --name="$sync_name" 2>/dev/null | grep -q "Watching for changes"; then
+            if mutagen sync list "$sync_name" 2>/dev/null | grep -q "Watching for changes"; then
                 break
             fi
             wait_count=$((wait_count + 1))
